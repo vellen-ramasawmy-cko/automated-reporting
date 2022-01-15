@@ -19,6 +19,7 @@ export AWS_PROFILE=cko-playground
 
 ##  Variables
 # Merchant name
+#loky
 
 echo ""
 echo ">> Please note that this is the automation for SFTP Automated Reporting. <<"
