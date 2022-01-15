@@ -10,12 +10,10 @@
 # aws cli version used 2.3.3
 
 #AWS account
-#export AWS_PROFILE=cko-playground
+export AWS_PROFILE=cko-playground
 
 ## Pre-checks
 
-# Ensure that the folder is present in the S3 bucket merlin-financial-reports-prod on cko-prod environment.
-# Ensure that there are no policies and role with the same name that are already present on cko-prod-legacy.
 # Ensure that there are no Route 53 entries with the same name that are already present on cko-prod-legacy.
 # Ensure that there are no AWS Transfer Family service entries with the same name that are already present on cko-prod-legacy.
 
@@ -72,6 +70,9 @@ clear
 
 echo "Merchant name to be used: $merchantname"
 echo "Merchant id to be used: $merchantid"
+
+echo ">> AWS Tag Used <<"
+
 echo "AWS Tag for merchant name: $merchantnametag"
 echo "Change number: $changenumber"
 echo "Creator: $creator"
@@ -83,28 +84,28 @@ echo ""
 read -p "Continue? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
 echo ""
 
-playground_server_id="s-e1027b976d2b4e67b"
+playground_server_id="s-a3c053263ced44f5b"
 
 #home_directory_mapping="{ "Entry": "/", "Target": "/sftp-test-nb/test" }"
-home_directory_mapping='Entry=/,Target=/sftp-test-vr/'$merchantid''
+home_directory_mapping='Entry=/,Target=/vellen-sftp-test/'$merchantid''
 
 echo ""
 echo ">> Creating user on AWS Transfer Family <<"
 echo ""
 
-#aws --profile cko-playground transfer create-user \
-#    --server-id $playground_server_id \
-#    --user-name $merchantid \
-#    --role aws-sftp \
-#    --policy aws-sftp  \
-#    --home-directory-type LOGICAL \
-#    --home-directory-mappings $home_directory_mapping \
-#    --ssh-public-key-body "$public_key" \
-#    --tags "Key"="Change","Value"="$changenumber" \
-#           "Key"="Creator","Value"="$creator" \
-#           "Key"="Merchant","Value"="$merchantnametag" \
-#           "Key"="Purpose","Value"="$purpose" \
-#           "Key"="Requester","Value"="$requester"
+aws --profile cko-playground transfer create-user \
+    --server-id $playground_server_id \
+    --user-name $merchantid \
+    --role aws-sftp \
+    --policy aws-sftp  \
+    --home-directory-type LOGICAL \
+    --home-directory-mappings $home_directory_mapping \
+    --ssh-public-key-body "$public_key" \
+    --tags "Key"="Change","Value"="$changenumber" \
+           "Key"="Creator","Value"="$creator" \
+           "Key"="Merchant","Value"="$merchantnametag" \
+           "Key"="Purpose","Value"="$purpose" \
+           "Key"="Requester","Value"="$requester"
 
 # Creates Folder on S3 Bucket
 
@@ -112,7 +113,7 @@ echo ""
 echo ">> Creating Folder on S3 Bucket <<"
 echo ""
 
-#aws s3api put-object --bucket vellen-sftp-test --key $merchantid/
+aws s3api put-object --bucket vellen-sftp-test --key $merchantid/
 
 # Creates route 53 records 
 
@@ -120,7 +121,7 @@ echo ""
 echo ">> Creating Route 53 record <<"
 echo ""
 
-#dns=$playground_server_id.server.transfer.eu-west-1.amazonaws.com
+dns=$playground_server_id.server.transfer.eu-west-1.amazonaws.com
 
 # Update JSON policy with merchant name folder line 22
 cp record.json $merchantname-record.json
@@ -131,7 +132,7 @@ cat $merchantname-record.json | jq --arg dns "$dns" '.Changes[0].ResourceRecordS
 cat $merchantname-record.json
 
 # hosted zone on playground cko-playground.ckotech.co
-#aws --profile cko-playground route53 change-resource-record-sets --hosted-zone-id Z08800003NARTIMTZS14F --change-batch file://$merchantname-record.json
+aws --profile cko-playground route53 change-resource-record-sets --hosted-zone-id Z08800003NARTIMTZS14F --change-batch file://$merchantname-record.json
 
 # deleting tmp files
 rm $merchantname-record.json
