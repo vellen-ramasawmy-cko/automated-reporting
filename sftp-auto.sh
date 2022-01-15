@@ -22,6 +22,7 @@
 ##  Variables
 # Merchant name
 #loky
+#Vellen
 
 echo ""
 echo ">> Please note that this is the automation for SFTP Automated Reporting. <<"
