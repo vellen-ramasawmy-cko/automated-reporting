@@ -1,0 +1,14 @@
+{
+	"Comment": "Testing creating a record set",
+	"Changes": [{
+		"Action": "CREATE",
+		"ResourceRecordSet": {
+			"Name": "target.company.com",
+			"Type": "CNAME",
+			"TTL": 120,
+			"ResourceRecords": [{
+				"Value": "DNS"
+			}]
+		}
+	}]
+}
