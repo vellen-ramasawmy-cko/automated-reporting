@@ -19,7 +19,6 @@ export AWS_PROFILE=cko-playground
 
 ##  Variables
 # Merchant name
-#loky
 
 echo ""
 echo ">> Please note that this is the automation for SFTP Automated Reporting. <<"
@@ -50,7 +49,7 @@ read -p "Enter the change number, e.g CHN-1234: " changenumber
 
 # Creator
 echo ""
-read -p "Enter the creator name for AWS Tags, e.g Vellen Ramasawmy: " creator
+read -p "Enter the creator name for AWS Tags, e.g Nirvan: " creator
 #creator="Vellen"
 
 # Purpose
@@ -88,7 +87,19 @@ echo ""
 playground_server_id="s-a3c053263ced44f5b"
 
 #home_directory_mapping="{ "Entry": "/", "Target": "/sftp-test-nb/test" }"
-home_directory_mapping='Entry=/,Target=/vellen-sftp-test/'$merchantid''
+home_directory_mapping='Entry=/,Target=/sftp-test-nb/'$merchantid''
+home_directory='/sftp-test-nb/'$merchantid''
+role_arn="arn:aws:iam::528130383285:role/aws-sftp-nb-test"
+policy_arn="arn:aws:iam::528130383285:policy/aws-sftp-policy-nb-test"
+
+# Creates Folder on S3 Bucket
+
+echo ""
+echo ">> Creating Folder on S3 Bucket <<"
+echo ""
+
+aws s3api put-object --bucket sftp-test-nb --key $merchantid/
+
 
 echo ""
 echo ">> Creating user on AWS Transfer Family <<"
@@ -97,24 +108,15 @@ echo ""
 aws --profile cko-playground transfer create-user \
     --server-id $playground_server_id \
     --user-name $merchantid \
-    --role aws-sftp \
-    --policy aws-sftp  \
-    --home-directory-type LOGICAL \
-    --home-directory-mappings $home_directory_mapping \
+    --role $role_arn \
+    --policy file://policy.json\
+    --home-directory $home_directory \
     --ssh-public-key-body "$public_key" \
     --tags "Key"="Change","Value"="$changenumber" \
            "Key"="Creator","Value"="$creator" \
            "Key"="Merchant","Value"="$merchantnametag" \
            "Key"="Purpose","Value"="$purpose" \
            "Key"="Requester","Value"="$requester"
-
-# Creates Folder on S3 Bucket
-
-echo ""
-echo ">> Creating Folder on S3 Bucket <<"
-echo ""
-
-aws s3api put-object --bucket vellen-sftp-test --key $merchantid/
 
 # Creates route 53 records 
 
