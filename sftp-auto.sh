@@ -16,27 +16,65 @@ export AWS_PROFILE=cko-playground
 
 # Ensure that there are no Route 53 entries with the same name that are already present on cko-prod-legacy.
 # Ensure that there are no AWS Transfer Family service entries with the same name that are already present on cko-prod-legacy.
+# Ensure that there are no folder on S3 with the same name that are already present on cko-prod-legacy.
 
 ##  Variables
 # Merchant name
 
 echo ""
-echo ">> Please note that this is the automation for SFTP Automated Reporting. <<"
-echo "IMPORTANT: Merchant Name and Merchant ID will be used as follows:
+echo ">> Please note that this is the automation for SFTP Automated Reporting and Token Migration. <<"
+echo "IMPORTANT: Merchant Name is used for Token Migration and Merchant Account Id and Merchant Name is used for automated reporting:
+
 
 - New user on AWS Transfer Family -->  merchantid
 - Entry on Route53                -->  merchantname.sftp.checkout.com
 - S3 Bucket                       -->  sftp-aws-cko/merchantid
 "
-
 echo ""
-read -p "Enter merchant name to be used: " merchantname
-
-echo ""
-read -p "Enter merchant account id to be used: " merchantid
+read -p "Enter the type of SFTP (Token or Automated): " accounttype
 
 
-## Validation to be included
+if [[ $accounttype == token ]];
+then
+    echo ""
+    read -p "Enter merchant name to be used: " merchantname
+    s3folder=$merchantname
+    sftpuser=$merchantname
+
+elif [[ $accounttype == automated ]]
+    then
+        
+        echo ""
+        read -p "Enter merchant name to be used: " merchantname
+
+        echo ""
+        read -p "Enter merchant account id to be used: " merchantid
+        s3folder=$merchantid
+        sftpuser=$merchantid
+else
+    echo "Invalid Account Type"
+    exit
+fi
+
+## Validation
+# Merchant name variable validation, checks if variable is empty, or contains spaces.
+re="[[:space:]]+"
+
+if [ -z "$merchantname" ]
+then
+    echo ""
+    echo ">> Merchant name cannot be empty, please refer to the above example. <<"
+    exit
+else
+    #echo "Variable merchant name is not empty"
+    
+    if [[ $merchantname =~ $re ]]; then
+        echo ""
+        echo ">> Merchant name cannot contain spaces, please refer to the above example. <<"
+        exit
+    fi
+
+fi
 
 echo ""
 read -p "Enter merchant name to be used as AWS Tags, e.g Curve OS Ltd: " merchantnametag
@@ -54,12 +92,12 @@ read -p "Enter the creator name for AWS Tags, e.g Nirvan: " creator
 
 # Purpose
 echo ""
-read -p "Enter the purpose of this change, e.g Automated reporting: " purpose
+read -p "Enter the purpose of this change, e.g Automated Reporting: " purpose
 #purpose="Automated Reporting"
 
 # Requester
 echo ""
-read -p "Enter the name of the requester, e.g Vellen Ramasawmy: " requester
+read -p "Enter the name of the requester, e.g Nirvan: " requester
 #requester="Vellen"
 
 # SSh Key
@@ -84,11 +122,11 @@ echo ""
 read -p "Continue? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
 echo ""
 
+
 playground_server_id="s-a3c053263ced44f5b"
 
-#home_directory_mapping="{ "Entry": "/", "Target": "/sftp-test-nb/test" }"
-home_directory_mapping='Entry=/,Target=/sftp-test-nb/'$merchantid''
-home_directory='/sftp-test-nb/'$merchantid''
+home_directory_mapping='Entry=/,Target=/sftp-test-nb/'$s3folder''
+home_directory='/sftp-test-nb/'$s3folder''
 role_arn="arn:aws:iam::528130383285:role/aws-sftp-nb-test"
 policy_arn="arn:aws:iam::528130383285:policy/aws-sftp-policy-nb-test"
 
@@ -98,7 +136,7 @@ echo ""
 echo ">> Creating Folder on S3 Bucket <<"
 echo ""
 
-aws s3api put-object --bucket sftp-test-nb --key $merchantid/
+aws s3api put-object --bucket sftp-test-nb --key $s3folder/
 
 
 echo ""
@@ -107,7 +145,7 @@ echo ""
 
 aws --profile cko-playground transfer create-user \
     --server-id $playground_server_id \
-    --user-name $merchantid \
+    --user-name $sftpuser \
     --role $role_arn \
     --policy file://policy.json\
     --home-directory $home_directory \
@@ -137,8 +175,18 @@ cat $merchantname-record.json
 # hosted zone on playground cko-playground.ckotech.co
 aws --profile cko-playground route53 change-resource-record-sets --hosted-zone-id Z08800003NARTIMTZS14F --change-batch file://$merchantname-record.json
 
+
+echo -e "\n>> POST-CHECKS <<"
+
+echo -e "\nUser on AWS Transfer Family:"
+aws transfer list-users --server-id $playground_server_id | grep $sftpuser
+
+echo -e "\nRecord on Route53:"
+aws route53 list-resource-record-sets --hosted-zone-id Z08800003NARTIMTZS14F | grep $merchantname
+
+echo -e "\nFolder in S3 Bucket:"
+aws s3 ls s3://sftp-test-nb | grep $s3folder
+
+
 # deleting tmp files
 rm $merchantname-record.json
-
-
-
